@@ -1,7 +1,48 @@
 #!/bin/bash
 
+# what os are we running?
+OS=$(uname -s)
+
+if [ "$OS" == "Linux" ];
+then
+    TAR=bsdtar
+elif [ "$OS" == "Darwin" ];
+then
+    TAR=tar
+fi
+
+if [ "$OS" == "Linux" ];
+then
+    MD5=md5sum
+elif [ "$OS" == "Darwin" ];
+then
+    MD5="md5 -q"
+fi
+
+if [ "$OS" == "Linux" ];
+then
+    if [ -e /usr/share/virtualbox/VBoxGuestAdditions.iso ]; then
+        ISO_GUESTADDITIONS="/usr/share/virtualbox/VBoxGuestAdditions.iso"
+    elif [ -e /usr/lib/virtualbox/additions/VBoxGuestAdditions.iso ]; then
+        ISO_GUESTADDITIONS="/usr/lib/virtualbox/additions/VBoxGuestAdditions.iso"
+    fi
+
+    CPIO="sudo cpio"
+
+elif [ "$OS" == "Darwin" ];
+then
+    ISO_GUESTADDITIONS="/Applications/VirtualBox.app/Contents/MacOS/VBoxGuestAdditions.iso"
+    CPIO="cpio"
+fi
+
+if [ ! -e "${ISO_GUESTADDITIONS}" ]; then
+    { echo >&2 "ERROR: ${ISO_GUESTADDITIONS} not found.  Aborting."; exit 1; }
+fi
+
 # make sure we have dependencies 
 hash mkisofs 2>/dev/null || { echo >&2 "ERROR: mkisofs not found.  Aborting."; exit 1; }
+hash ${TAR}  2>/dev/null || { echo >&2 "ERROR: ${TAR} not found.  Aborting."; exit 1; }
+hash ${MD5}  2>/dev/null || { echo >&2 "ERROR: ${MD5} not found.  Aborting."; exit 1; }
 
 set -o nounset
 set -o errexit
@@ -23,8 +64,7 @@ FOLDER_ISO_INITRD="${FOLDER_BUILD}/iso/initrd"
 # start with a clean slate
 if [ -d "${FOLDER_BUILD}" ]; then
   echo "Cleaning build directory ..."
-  chmod -R u+w "${FOLDER_BUILD}"
-  rm -rf "${FOLDER_BUILD}"
+  sudo rm -rf "${FOLDER_BUILD}"
   mkdir -p "${FOLDER_BUILD}"
 fi
 
@@ -37,7 +77,6 @@ mkdir -p "${FOLDER_ISO_INITRD}"
 
 ISO_FILENAME="${FOLDER_ISO}/`basename ${ISO_URL}`"
 INITRD_FILENAME="${FOLDER_ISO}/initrd.gz"
-ISO_GUESTADDITIONS="/Applications/VirtualBox.app/Contents/MacOS/VBoxGuestAdditions.iso"
 
 # download the installation disk if you haven't already or it is corrupted somehow
 echo "Downloading `basename ${ISO_URL}` ..."
@@ -45,7 +84,7 @@ if [ ! -e "${ISO_FILENAME}" ]; then
   curl --output "${ISO_FILENAME}" -L "${ISO_URL}"
 
   # make sure download is right...
-  ISO_HASH=`md5 -q "${ISO_FILENAME}"`
+  ISO_HASH=`${MD5} "${ISO_FILENAME}"`
   if [ "${ISO_MD5}" != "${ISO_HASH}" ]; then
     echo "ERROR: MD5 does not match. Got ${ISO_HASH} instead of ${ISO_MD5}. Aborting."
     exit 1
@@ -57,7 +96,7 @@ echo "Creating Custom ISO"
 if [ ! -e "${FOLDER_ISO}/custom.iso" ]; then
 
   echo "Untarring downloaded ISO ..."
-  tar -C "${FOLDER_ISO_CUSTOM}" -xf "${ISO_FILENAME}"
+  ${TAR} -C "${FOLDER_ISO_CUSTOM}" -xf "${ISO_FILENAME}"
 
   # backup initrd.gz
   echo "Backing up current init.rd ..."
@@ -67,11 +106,11 @@ if [ ! -e "${FOLDER_ISO}/custom.iso" ]; then
   # stick in our new initrd.gz
   echo "Installing new initrd.gz ..."
   cd "${FOLDER_ISO_INITRD}"
-  gunzip -c "${FOLDER_ISO_CUSTOM}/install/initrd.gz.org" | cpio -id
+  gunzip -c "${FOLDER_ISO_CUSTOM}/install/initrd.gz.org" | ${CPIO} -id
   cd "${FOLDER_BASE}"
   cp preseed.cfg "${FOLDER_ISO_INITRD}/preseed.cfg"
   cd "${FOLDER_ISO_INITRD}"
-  find . | cpio --create --format='newc' | gzip  > "${FOLDER_ISO_CUSTOM}/install/initrd.gz"
+  find . | ${CPIO} --create --format='newc' | gzip  > "${FOLDER_ISO_CUSTOM}/install/initrd.gz"
 
   # clean up permissions
   echo "Cleaning up Permissions ..."
@@ -150,7 +189,7 @@ if ! VBoxManage showvminfo "${BOX}" >/dev/null 2>/dev/null; then
     --type hdd \
     --medium "${FOLDER_VBOX}/${BOX}/${BOX}.vdi"
 
-  VBoxManage startvm "${BOX}"
+  VBoxManage startvm "${BOX}" --type headless
 
   echo -n "Waiting for installer to finish "
   while VBoxManage list runningvms | grep "${BOX}" >/dev/null; do
@@ -171,7 +210,7 @@ if ! VBoxManage showvminfo "${BOX}" >/dev/null 2>/dev/null; then
     --type dvddrive \
     --medium "${ISO_GUESTADDITIONS}"
 
-  VBoxManage startvm "${BOX}"
+  VBoxManage startvm "${BOX}" --type headless
 
   # get private key
   curl --output "${FOLDER_BUILD}/id_rsa" "https://raw.github.com/mitchellh/vagrant/master/keys/vagrant"
