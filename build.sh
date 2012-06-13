@@ -13,7 +13,7 @@ fi
 
 if [ "$OS" == "Linux" ];
 then
-    MD5=md5sum
+    MD5="md5sum | cut -f 1 -d' ' "
 elif [ "$OS" == "Darwin" ];
 then
     MD5="md5 -q"
