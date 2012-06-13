@@ -23,3 +23,7 @@ update-grub
 
 # clean up
 apt-get clean
+
+# Zero Unused space
+dd if=/dev/zero of=/zero bs=1M
+rm -f /zero
