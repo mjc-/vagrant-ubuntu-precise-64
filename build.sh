@@ -13,6 +13,7 @@ fi
 
 if [ "$OS" == "Linux" ];
 then
+    hash md5sum  2>/dev/null || { echo >&2 "ERROR: ${MD5} not found.  Aborting."; exit 1; }
     MD5="md5sum | cut -f 1 -d' ' "
 elif [ "$OS" == "Darwin" ];
 then
@@ -42,7 +43,6 @@ fi
 # make sure we have dependencies 
 hash mkisofs 2>/dev/null || { echo >&2 "ERROR: mkisofs not found.  Aborting."; exit 1; }
 hash ${TAR}  2>/dev/null || { echo >&2 "ERROR: ${TAR} not found.  Aborting."; exit 1; }
-hash ${MD5}  2>/dev/null || { echo >&2 "ERROR: ${MD5} not found.  Aborting."; exit 1; }
 
 set -o nounset
 set -o errexit
