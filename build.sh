@@ -4,6 +4,11 @@
 # what os are we running?
 OS=$(uname -s)
 
+# make sure debug defined for below checks
+if [ -z $DEBUG ]; then
+    DEBUG=0
+fi
+
 if [ $DEBUG -gt 1 ]; then
     # turn on tracing
     set -x
