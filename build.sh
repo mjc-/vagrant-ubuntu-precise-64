@@ -64,7 +64,7 @@ debug "checking for tar"
 
 # make sure we have dependencies 
 hash mkisofs 2>/dev/null || { echo >&2 "ERROR: mkisofs not found.  Aborting."; exit 1; }
-hash ${TAR}  2>/dev/null || { echo >&2 "ERROR: usable tar not found.  Aborting."; exit 1; }
+hash ${TAR}  2>/dev/null || { echo >&2 "ERROR: usable tar not found, on linux bsdtar is required.  Aborting."; exit 1; }
 
 set -o nounset
 set -o errexit
