@@ -1,8 +1,21 @@
 #!/bin/bash
 
+
 # what os are we running?
 OS=$(uname -s)
 
+if [ $DEBUG -gt 1 ]; then
+    # turn on tracing
+    set -x
+fi 
+
+function debug {
+    if [ $DEBUG -gt 0 ]; then
+        echo $@
+    fi
+}
+
+debug "setting tar"
 if [ "$OS" == "Linux" ];
 then
     TAR=bsdtar
@@ -11,15 +24,17 @@ then
     TAR=tar
 fi
 
+debug "setting md5sum"
 if [ "$OS" == "Linux" ];
 then
-    hash md5sum  2>/dev/null || { echo >&2 "ERROR: ${MD5} not found.  Aborting."; exit 1; }
+    hash md5sum  2>/dev/null || { echo >&2 "ERROR: md5sum not found.  Aborting."; exit 1; }
     MD5="md5sum | cut -f 1 -d' ' "
 elif [ "$OS" == "Darwin" ];
 then
     MD5="md5 -q"
 fi
 
+debug "setting iso foo"
 if [ "$OS" == "Linux" ];
 then
     if [ -e /usr/share/virtualbox/VBoxGuestAdditions.iso ]; then
@@ -37,12 +52,14 @@ then
 fi
 
 if [ ! -e "${ISO_GUESTADDITIONS}" ]; then
-    { echo >&2 "ERROR: ${ISO_GUESTADDITIONS} not found.  Aborting."; exit 1; }
+    { echo >&2 "ERROR: virtualbox guest additions  not found.  Aborting."; exit 1; }
 fi
+
+debug "checking for tar"
 
 # make sure we have dependencies 
 hash mkisofs 2>/dev/null || { echo >&2 "ERROR: mkisofs not found.  Aborting."; exit 1; }
-hash ${TAR}  2>/dev/null || { echo >&2 "ERROR: ${TAR} not found.  Aborting."; exit 1; }
+hash ${TAR}  2>/dev/null || { echo >&2 "ERROR: usable tar not found.  Aborting."; exit 1; }
 
 set -o nounset
 set -o errexit
@@ -62,12 +79,14 @@ FOLDER_ISO_CUSTOM="${FOLDER_BUILD}/iso/custom"
 FOLDER_ISO_INITRD="${FOLDER_BUILD}/iso/initrd"
 
 # start with a clean slate
+debug "cleaning any old runs"
 if [ -d "${FOLDER_BUILD}" ]; then
   echo "Cleaning build directory ..."
   sudo rm -rf "${FOLDER_BUILD}"
   mkdir -p "${FOLDER_BUILD}"
 fi
 
+debug "init dir structure"
 # Setting things back up again
 mkdir -p "${FOLDER_ISO}"
 mkdir -p "${FOLDER_BUILD}"
