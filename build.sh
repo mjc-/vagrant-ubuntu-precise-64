@@ -13,7 +13,7 @@ fi
 
 if [ "$OS" == "Linux" ];
 then
-    hash md5sum  2>/dev/null || { echo >&2 "ERROR: ${MD5} not found.  Aborting."; exit 1; }
+    hash md5sum  2>/dev/null || { echo >&2 "ERROR: md5sum not found.  Aborting."; exit 1; }
     MD5="md5sum | cut -f 1 -d' ' "
 elif [ "$OS" == "Darwin" ];
 then
